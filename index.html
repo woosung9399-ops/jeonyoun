@@ -2,188 +2,107 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
 <title>Whack-a-Mole 🎯</title>
 <style>
   :root{
-    /* 셀 크기를 반응형으로: 모바일~데스크톱까지 자연스레 확대/축소 */
     --cell: clamp(82px, 22vw, 120px);
     --gap:  clamp(8px, 2.6vw, 14px);
     --header-pad: max(10px, env(safe-area-inset-top, 0));
     --side-pad: max(12px, env(safe-area-inset-left, 0));
   }
-
-  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
-  html, body { height: 100%; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height:100%; overscroll-behavior: none; }
+  .playing, .playing * { touch-action: none !important; }
+  .lock { position: fixed; overflow: hidden; inset: 0; width: 100%; }
 
   body{
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    margin:0; display:flex; flex-direction:column; align-items:center;
     font-family: ui-sans-serif, system-ui, -apple-system, "Pretendard","Segoe UI",sans-serif;
-
-    /* ✅ 배경을 전체로 덮기 */
     background: url('https://i.postimg.cc/QCs9xJCp/image.png') center center / cover no-repeat fixed;
-    /* 모바일에서 fixed가 버벅일 수 있어 아래에서 해제 */
-    padding: 0;
-    min-height: 100vh;
+    min-height:100vh;
   }
 
-  /* ✅ 헤더 - 블러 제거 + 완전 투명 + 안전영역 패딩 */
   header{
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
+    position:sticky; top:0; z-index:10; width:100%;
+    display:flex; align-items:center; justify-content:space-between;
     padding: var(--header-pad) calc(var(--side-pad) + 12px) 10px calc(var(--side-pad) + 12px);
-    background: transparent;          /* 투명 */
-    backdrop-filter: none;            /* 블러 제거 */
-    -webkit-backdrop-filter: none;
-    box-shadow: none;                 /* 그림자 제거 */
+    background: transparent; backdrop-filter:none; -webkit-backdrop-filter:none; box-shadow:none;
   }
-
-  /* ✅ 로고: 이미지 전체 보이고 픽셀 깨짐 방지, 배경 투명 */
-  #homeLogo{
-    display: inline-flex;
-    align-items: center;
-    cursor: pointer;
-  }
-  #homeLogo img{
-    height: 40px;                 /* 필요시 여기만 조절 */
-    width: auto;
-    object-fit: contain;          /* 전체가 보이도록 */
-    image-rendering: auto;        /* 픽셀 보존 */
-    background: transparent;      /* 이미지 영역 배경 투명 */
-    display: block;
-  }
+  #homeLogo{ display:inline-flex; align-items:center; cursor:pointer; }
+  #homeLogo img{ height:40px; width:auto; object-fit:contain; image-rendering:auto; background:transparent; display:block; }
 
   .hud .btn{
-    min-height: 44px;             /* 터치 타겟 확보 */
-    min-width: 44px;
-    padding: 8px 14px;
-    font-size: 16px;
-    font-weight: 700;
-    border: 0;
-    border-radius: 10px;
-    cursor: pointer;
-    background: rgba(17,17,17,.85);
-    color: #fff;
+    min-height:44px; min-width:44px; padding:8px 14px; font-size:16px; font-weight:700;
+    border:0; border-radius:10px; cursor:pointer; background:rgba(17,17,17,.85); color:#fff;
   }
 
-  /* 본문 타이틀/정보판 */
-  .wrap{
-    width: min(760px, 100%);
-    padding: 12px calc(var(--side-pad) + 12px) 0;
-  }
-  h1{
-    margin: 8px 0 6px;
-    color: #fff;
-    text-shadow: 0 2px 10px rgba(0,0,0,.4);
-    font-size: clamp(18px, 4.5vw, 24px);
-    font-weight: 800;
-  }
-  #timer, #scoreboard{
-    color: #fff;
-    text-shadow: 0 1px 6px rgba(0,0,0,.45);
-    font-size: clamp(14px, 3.8vw, 18px);
-    margin-bottom: 6px;
-  }
+  .wrap{ width:min(760px,100%); padding:12px calc(var(--side-pad) + 12px) 0 }
+  h1{ margin:8px 0 6px; color:#fff; text-shadow:0 2px 10px rgba(0,0,0,.4); font-size:clamp(18px,4.5vw,24px); font-weight:800; }
+  #timer, #scoreboard{ color:#fff; text-shadow:0 1px 6px rgba(0,0,0,.45); font-size:clamp(14px,3.8vw,18px); margin-bottom:6px; }
 
-  /* ✅ 반응형 그리드 */
   #grid{
-    display: grid;
-    grid-template-columns: repeat(3, var(--cell));
-    grid-auto-rows: var(--cell);
-    gap: var(--gap);
-    justify-content: center;
-    width: 100%;
-    margin: 8px 0 12px;
+    display:grid; grid-template-columns:repeat(3, var(--cell)); grid-auto-rows:var(--cell);
+    gap:var(--gap); justify-content:center; width:100%; margin:8px 0 12px;
   }
-
   .hole{
-    position: relative;
-    width: var(--cell);
-    height: var(--cell);
-    border-radius: 50%;
-    overflow: hidden;
-    background: #6a4a3c;
-    box-shadow: inset 0 8px 24px #2a160f, 0 6px 18px rgba(0,0,0,.25);
+    position:relative; width:var(--cell); height:var(--cell); border-radius:50%; overflow:hidden;
+    background:#6a4a3c; box-shadow: inset 0 8px 24px #2a160f, 0 6px 18px rgba(0,0,0,.25);
   }
-
   .mole{
-    position: absolute;
-    top: 60%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 78%;
-    max-width: 100%;
-    user-select: none;
-    -webkit-user-drag: none;
-    cursor: pointer;
-    transition: top .18s ease;
+    position:absolute; top:60%; left:50%; transform:translate(-50%, -50%);
+    width:78%; user-select:none; -webkit-user-drag:none; cursor:pointer; transition: top .18s ease;
     filter: drop-shadow(0 4px 6px rgba(0,0,0,.35));
   }
-  .mole.up{ top: 28%; }
+  .mole.up{ top:28%; }
 
   button#start{
-    display: inline-block;
-    min-height: 44px; min-width: 120px;
-    padding: 10px 20px;
-    font-size: 16px; font-weight: 800;
-    border-radius: 12px;
-    border: 0;
-    background: #111; color:#fff;
-    box-shadow: 0 6px 18px rgba(0,0,0,.25);
+    display:inline-block; min-height:44px; min-width:120px; padding:10px 20px;
+    font-size:16px; font-weight:800; border-radius:12px; border:0; background:#111; color:#fff;
+    box-shadow:0 6px 18px rgba(0,0,0,.25);
   }
 
-  /* 스코어보드 카드 */
-  #scoreboard-list{
-    width: min(760px, 100%);
-    padding: 0 calc(var(--side-pad) + 12px);
-    margin: 12px 0 18px;
-  }
-  #scoreboard-list h2{
-    margin: 6px 0 8px;
-    color:#fff; text-shadow:0 1px 6px rgba(0,0,0,.45);
-    font-size: clamp(16px, 4vw, 20px);
-  }
-  #scores{ list-style: none; padding: 0; margin: 0; }
+  #scoreboard-list{ width:min(760px,100%); padding:0 calc(var(--side-pad) + 12px); margin:12px 0 18px; }
+  #scoreboard-list h2{ margin:6px 0 8px; color:#fff; text-shadow:0 1px 6px rgba(0,0,0,.45); font-size:clamp(16px,4vw,20px); }
+  #scores{ list-style:none; padding:0; margin:0; }
   #scores li{
-    background: rgba(255,255,255,.9);
-    margin-bottom: 6px;
-    padding: 8px 12px;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,.18);
-    display: flex; justify-content: space-between;
-    font-weight: 700;
+    background:rgba(255,255,255,.9); margin-bottom:6px; padding:8px 12px; border-radius:10px;
+    box-shadow:0 2px 8px rgba(0,0,0,.18); display:flex; justify-content:space-between; font-weight:700;
+  }
+
+  /* 일시정지 오버레이 */
+  #pauseOverlay{
+    position: fixed; inset:0; display:none; place-items:center;
+    background: rgba(0,0,0,.4);
+    z-index: 20; color:#fff; text-align:center; padding:20px;
+  }
+  #pauseOverlay.show{ display:grid; }
+  #pauseOverlay .card{
+    background: rgba(0,0,0,.55);
+    border: 1px solid rgba(255,255,255,.18);
+    padding: 16px 20px; border-radius: 14px; backdrop-filter: blur(2px);
+    max-width: 90vw;
+  }
+  #pauseOverlay h2{ margin: 0 0 6px; font-size: 22px; }
+  #pauseOverlay p{ margin: 0 0 10px; opacity: .9; }
+  #pauseOverlay .resume{
+    padding:10px 18px; border-radius:12px; border:0; font-weight:800; font-size:16px; cursor:pointer;
   }
 
   footer{
-    margin-top: auto;
-    width: 100%;
-    text-align: center;
-    padding: 14px calc(var(--side-pad) + 12px) max(12px, env(safe-area-inset-bottom, 0));
-    background: rgba(0,0,0,.6);
-    color: #fff;
-    font-size: 14px;
+    margin-top:auto; width:100%; text-align:center;
+    padding:14px calc(var(--side-pad) + 12px) max(12px, env(safe-area-inset-bottom, 0));
+    background: rgba(0,0,0,.6); color:#fff; font-size:14px;
   }
 
-  /* 📱 모바일 최적화: 배경 fixed 해제(스크롤 저커 방지), 그리드 여백 조정 */
   @media (max-width: 600px){
     body{ background-attachment: scroll; }
-    #grid{ gap: max(8px, 2vw); }
+    #grid{ gap:max(8px, 2vw); }
   }
 </style>
 </head>
 <body>
 
-<!-- 🔝 투명 헤더 (블러 없음) -->
 <header>
   <div id="homeLogo" role="button" tabindex="0" title="초기 화면으로 이동">
     <img src="https://api.multicampus.com/ssf/v1/resource/public/images/FILBS202506207041267" alt="multicampus 로고" />
@@ -207,7 +126,15 @@
   </div>
 </div>
 
-<!-- 🔊 오디오 -->
+<!-- 일시정지 오버레이 -->
+<div id="pauseOverlay" aria-hidden="true">
+  <div class="card">
+    <h2>일시정지 ⏸️</h2>
+    <p>잠깐 쉬어가요. 계속하려면 아래 버튼을 눌러주세요.</p>
+    <button class="resume">▶️ Resume</button>
+  </div>
+</div>
+
 <audio id="bgm" src="https://www.dropbox.com/scl/fi/05ytgdfewmcgokh7onrzp/770707__audiocoffee__children-game-loop-ver.wav?rlkey=elzlfgeetnf16zieb8nrmri5j&raw=1" loop></audio>
 <audio id="hitSound" src="https://www.dropbox.com/scl/fi/azmq2hkl45wns76novc2k/85591__jankoehl__hit-wood10.wav?rlkey=rcjxyhs5frxc1qaw0o2eegpku&raw=1"></audio>
 
@@ -222,6 +149,9 @@
   const scoresUl = document.getElementById('scores');
   const bgm = document.getElementById('bgm');
   const hitSound = document.getElementById('hitSound');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const pauseOverlay = document.getElementById('pauseOverlay');
+  const resumeBtn = pauseOverlay.querySelector('.resume');
 
   const holes = [];
   let score = 0;
@@ -235,6 +165,77 @@
   const moleVisibleTime = 800;
   const moleImgUrl = 'https://i.postimg.cc/D0p0cdj3/pngegg.png';
 
+  // 잠금 관련
+  let lastTouchEnd = 0;
+  let lockScrollY = 0;
+  let isLocked = false;
+  const prevent = (e)=>{ e.preventDefault(); };
+  const preventScroll = ()=>{ window.scrollTo(0, lockScrollY); };
+
+  function enableInputLock(){
+    if(isLocked) return;
+    isLocked = true;
+    lockScrollY = window.scrollY || 0;
+
+    document.documentElement.classList.add('lock','playing');
+    document.body.classList.add('lock','playing');
+    document.body.style.top = `-${lockScrollY}px`;
+
+    document.addEventListener('touchmove', prevent, {passive:false});
+    document.addEventListener('gesturestart', prevent, {passive:false});
+    document.addEventListener('touchend', (e)=>{
+      const now = Date.now();
+      if(now - lastTouchEnd < 300){ e.preventDefault(); }
+      lastTouchEnd = now;
+    }, {passive:false});
+    window.addEventListener('scroll', preventScroll, {passive:false});
+    window.addEventListener('keydown', blockKeys, {capture:true});
+  }
+  function disableInputLock(){
+    if(!isLocked) return;
+    isLocked = false;
+    document.documentElement.classList.remove('lock','playing');
+    document.body.classList.remove('lock','playing');
+    document.removeEventListener('touchmove', prevent);
+    document.removeEventListener('gesturestart', prevent);
+    window.removeEventListener('scroll', preventScroll);
+    window.removeEventListener('keydown', blockKeys, {capture:true});
+    const y = lockScrollY;
+    document.body.style.top = '';
+    window.scrollTo(0, y);
+  }
+  function blockKeys(e){
+    const keys = ['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','PageUp','PageDown','Home','End'];
+    if(keys.includes(e.code)){ e.preventDefault(); }
+  }
+
+  // 일시정지 상태
+  let running = false;
+  let paused  = false;
+
+  function setPaused(state){
+    if(!running) return;
+    paused = state;
+    if(paused){
+      // 스폰 중단 & BGM 일시정지
+      clearInterval(gameTimer);
+      bgm.pause();
+      // 오버레이 표시, 버튼 텍스트 변경
+      pauseOverlay.classList.add('show');
+      pauseOverlay.setAttribute('aria-hidden', 'false');
+      pauseBtn.textContent = '▶️ Resume';
+    }else{
+      // 스폰 재개 & BGM 재개
+      clearInterval(gameTimer);
+      gameTimer = setInterval(showMoles, moleInterval);
+      bgm.play().catch(()=>{});
+      // 오버레이 숨김, 버튼 텍스트 변경
+      pauseOverlay.classList.remove('show');
+      pauseOverlay.setAttribute('aria-hidden', 'true');
+      pauseBtn.textContent = '⏸️ Pause';
+    }
+  }
+
   function createGrid() {
     for(let i=0; i<9; i++) {
       const hole = document.createElement('div');
@@ -246,14 +247,21 @@
       grid.appendChild(hole);
       holes.push({hole, mole});
       mole.addEventListener('click', whack);
+      mole.addEventListener('touchstart', whack, {passive:false});
     }
   }
 
   function updateDifficulty() {
     moleInterval = Math.max(300, 1000 - Math.floor(score / 10) * 100);
+    // 재개 시 최신 템포 반영
+    if(running && !paused){
+      clearInterval(gameTimer);
+      gameTimer = setInterval(showMoles, moleInterval);
+    }
   }
 
   function showMoles() {
+    if(paused) return;
     let moleCount = score>=25 ? 3 : score>=10 ? 2 : 1;
     let holesAvailable = holes.filter(h => !h.mole.classList.contains('up'));
     moleCount = Math.min(moleCount, holesAvailable.length);
@@ -267,13 +275,15 @@
   }
 
   function whack(e) {
+    if(e && e.cancelable) e.preventDefault();
+    if(paused) return;                 // ⛔ 일시정지 중 클릭 무시
     if(!e.isTrusted) return;
     if(this.classList.contains('up')) {
       score++;
       scoreEl.textContent = score;
       this.classList.remove('up');
       hitSound.currentTime = 0;
-      hitSound.play();
+      hitSound.play().catch(()=>{});
       clearInterval(gameTimer);
       updateDifficulty();
       gameTimer = setInterval(showMoles, moleInterval);
@@ -284,7 +294,9 @@
   function startCountdown() {
     timeLeft = gameDuration;
     timerEl.textContent = `Time left: ${timeLeft}s`;
+    clearInterval(countdownTimer);
     countdownTimer = setInterval(()=>{
+      if(paused) return;               // ⏸️ 멈춤
       timeLeft--;
       timerEl.textContent = `Time left: ${timeLeft}s`;
       if(timeLeft <= 0) {
@@ -295,9 +307,20 @@
   }
 
   function endGame() {
+    running = false;
+    paused = false;
     bgm.pause();
     bgm.currentTime = 0;
     clearInterval(gameTimer);
+
+    // 잠금 해제
+    disableInputLock();
+
+    // 오버레이 닫기/버튼 복원
+    pauseOverlay.classList.remove('show');
+    pauseOverlay.setAttribute('aria-hidden', 'true');
+    pauseBtn.textContent = '⏸️ Pause';
+
     alert(`Time's up! Your score: ${score}`);
     let playerName = prompt('Enter your name for the scoreboard:','Player') || 'Player';
     saveScore(playerName, score);
@@ -334,8 +357,19 @@
     startBtn.disabled=true;
     scoreboardList.style.display='none';
     holes.forEach(({mole})=>mole.classList.remove('up'));
+
+    // 모바일 입력 잠금
+    enableInputLock();
+
+    // 상태
+    running = true;
+    paused = false;
+
+    // BGM
     bgm.currentTime=0;
     bgm.play().catch(()=>{});
+
+    // 게임 루프
     updateDifficulty();
     showMoles();
     clearInterval(gameTimer);
@@ -343,9 +377,10 @@
     startCountdown();
   }
 
-  // 헤더 로고/일시정지 버튼 이벤트 훅(필요 시 확장)
+  // 헤더 버튼
   document.getElementById('homeLogo').addEventListener('click', ()=>window.scrollTo({top:0, behavior:'smooth'}));
-  document.getElementById('pauseBtn').addEventListener('click', ()=>alert('일시정지 기능을 연결하려면 알려주세요!'));
+  pauseBtn.addEventListener('click', ()=> setPaused(!paused));
+  resumeBtn.addEventListener('click', ()=> setPaused(false));
 
   createGrid();
   displayScores();
