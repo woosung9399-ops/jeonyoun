@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>Whack-a-Mole 🎯</title>
+
+  <style>
+
+    body {
+
+      display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  font-family: sans-serif;
+
+  background: url('https://i.postimg.cc/QCs9xJCp/image.png') no-repeat center center fixed;
+
+  background-size: cover;
+
+  margin: 0;
+
+  padding: 20px;
+
+    }
+
+    h1 { margin-bottom: 10px; }
+
+    #scoreboard, #timer {
+
+      font-size: 18px;
+
+      margin-bottom: 10px;
+
+    }
+
+    #grid {
+
+      display: grid;
+
+      grid-template: repeat(3, 100px) / repeat(3, 100px);
+
+      gap: 10px;
+
+    }
+
+    .hole {
+
+      position: relative;
+
+      width: 100px;
+
+      height: 100px;
+
+      background: #654;
+
+      border-radius: 50%;
+
+      overflow: hidden;
+
+      box-shadow: inset 0 0 10px #210;
+
+    }
+
+    .mole {
+
+      position: absolute;
+
+      top: 60px;
+
+      left: 50%;
+
+      transform: translateX(-50%);
+
+      width: 80px;
+
+      cursor: pointer;
+
+      transition: top 0.2s;
+
+    }
+
+    .up {
+
+      top: 10px;
+
+    }
+
+    button {
+
+      margin-top: 15px;
+
+      padding: 8px 16px;
+
+      font-size: 16px;
+
+    }
+
+    #scoreboard-list {
+
+      margin-top: 15px;
+
+      width: 300px;
+
+    }
+
+    #scoreboard-list h2 {
+
+      margin-bottom: 8px;
+
+    }
+
+    #scoreboard-list ul {
+
+      list-style: none;
+
+      padding: 0;
+
+    }
+
+    #scoreboard-list li {
+
+      background: #fff;
+
+      margin-bottom: 5px;
+
+      padding: 6px 10px;
+
+      border-radius: 4px;
+
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+
+    }
+
+  </style>
+
+</head>
+
+<body>
+
+
+
+  <h1>두더지 잡기 대작전</h1>
+
+  <div id="timer">Time left: 30s</div>
+
+  <div id="scoreboard">Score: <span id="score">0</span></div>
+
+  <div id="grid"></div>
+
+  <button id="start">Start Game</button>
+
+
+
+  <div id="scoreboard-list" style="display:none;">
+
+    <h2>👑 Scoreboard</h2>
+
+    <ul id="scores"></ul>
+
+  </div>
+
+
+
+  <!-- 🔊 오디오 요소 -->
+
+  <audio id="bgm" src="https://www.dropbox.com/scl/fi/05ytgdfewmcgokh7onrzp/770707__audiocoffee__children-game-loop-ver.wav?rlkey=elzlfgeetnf16zieb8nrmri5j&st=nry2aos6&raw=1
+
+" loop></audio>
+
+  <audio id="hitSound" src="https://www.dropbox.com/scl/fi/azmq2hkl45wns76novc2k/85591__jankoehl__hit-wood10.wav?rlkey=rcjxyhs5frxc1qaw0o2eegpku&st=epdgf6au&raw=1
+
+"></audio>
+
+
+
+<script>
+
+  const grid = document.getElementById('grid');
+
+  const scoreEl = document.getElementById('score');
+
+  const startBtn = document.getElementById('start');
+
+  const timerEl = document.getElementById('timer');
+
+  const scoreboardList = document.getElementById('scoreboard-list');
+
+  const scoresUl = document.getElementById('scores');
+
+
+
+  const bgm = document.getElementById('bgm');
+
+  const hitSound = document.getElementById('hitSound');
+
+
+
+  const holes = [];
+
+  let score = 0;
+
+  let moleTimer = null;
+
+  let gameTimer = null;
+
+  let countdownTimer = null;
+
+
+
+  const gameDuration = 30; // seconds
+
+  let timeLeft = gameDuration;
+
+
+
+  let moleInterval = 1000; // initial mole appearance interval
+
+  const moleVisibleTime = 800; // how long mole stays up
+
+
+
+  const moleImgUrl = 'https://i.postimg.cc/D0p0cdj3/pngegg.png';
+
+
+
+  function createGrid() {
+
+    for(let i=0; i<9; i++) {
+
+      const hole = document.createElement('div');
+
+      hole.classList.add('hole');
+
+      const mole = document.createElement('img');
+
+      mole.src = moleImgUrl;
+
+      mole.classList.add('mole');
+
+      hole.appendChild(mole);
+
+      grid.appendChild(hole);
+
+      holes.push({hole, mole});
+
+      mole.addEventListener('click', whack);
+
+    }
+
+  }
+
+
+
+  function updateDifficulty() {
+
+    moleInterval = Math.max(300, 1000 - Math.floor(score / 10) * 100);
+
+  }
+
+
+
+  function showMoles() {
+
+    let moleCount;
+
+    if (score >= 25) {
+
+      moleCount = 3;
+
+    } else if (score >= 10) {
+
+      moleCount = 2;
+
+    } else {
+
+      moleCount = 1;
+
+    }
+
+
+
+    let holesAvailable = holes.filter(h => !h.mole.classList.contains('up'));
+
+    moleCount = Math.min(moleCount, holesAvailable.length);
+
+
+
+    for(let i=0; i<moleCount; i++) {
+
+      const idx = Math.floor(Math.random() * holesAvailable.length);
+
+      const { mole } = holesAvailable[idx];
+
+      mole.classList.add('up');
+
+      setTimeout(() => {
+
+        mole.classList.remove('up');
+
+      }, moleVisibleTime);
+
+      holesAvailable.splice(idx, 1);
+
+    }
+
+  }
+
+
+
+  function whack(e) {
+
+    if(!e.isTrusted) return;
+
+    if(this.classList.contains('up')) {
+
+      score++;
+
+      scoreEl.textContent = score;
+
+      this.classList.remove('up');
+
+
+
+      hitSound.currentTime = 0;
+
+      hitSound.play();
+
+
+
+      clearInterval(gameTimer);
+
+      updateDifficulty();
+
+      gameTimer = setInterval(showMoles, moleInterval);
+
+      showMoles();
+
+    }
+
+  }
+
+
+
+  function startCountdown() {
+
+    timeLeft = gameDuration;
+
+    timerEl.textContent = `Time left: ${timeLeft}s`;
+
+
+
+    countdownTimer = setInterval(() => {
+
+      timeLeft--;
+
+      timerEl.textContent = `Time left: ${timeLeft}s`;
+
+      if(timeLeft <= 0) {
+
+        clearInterval(countdownTimer);
+
+        endGame();
+
+      }
+
+    }, 1000);
+
+  }
+
+
+
+  function endGame() {
+
+    bgm.pause();
+
+    bgm.currentTime = 0;
+
+
+
+    clearInterval(gameTimer);
+
+    clearTimeout(moleTimer);
+
+    alert(`Time's up! Your score: ${score}`);
+
+
+
+    let playerName = prompt('Enter your name for the scoreboard:', 'Player');
+
+    if(!playerName) playerName = 'Player';
+
+
+
+    saveScore(playerName, score);
+
+    displayScores();
+
+
+
+    startBtn.disabled = false;
+
+  }
+
+
+
+  function saveScore(name, score) {
+
+    const storedScores = JSON.parse(localStorage.getItem('whackScores')) || [];
+
+    storedScores.push({name, score});
+
+    storedScores.sort((a,b) => b.score - a.score);
+
+    const topScores = storedScores.slice(0,10);
+
+    localStorage.setItem('whackScores', JSON.stringify(topScores));
+
+  }
+
+
+
+  function displayScores() {
+
+    const storedScores = JSON.parse(localStorage.getItem('whackScores')) || [];
+
+    scoresUl.innerHTML = '';
+
+    if(storedScores.length === 0) {
+
+      scoresUl.innerHTML = '<li>No scores yet.</li>';
+
+    } else {
+
+      storedScores.forEach(({name, score}) => {
+
+        const li = document.createElement('li');
+
+        li.textContent = `${name}: ${score}`;
+
+        scoresUl.appendChild(li);
+
+      });
+
+    }
+
+    scoreboardList.style.display = 'block';
+
+  }
+
+
+
+  function startGame() {
+
+    score = 0;
+
+    scoreEl.textContent = score;
+
+    startBtn.disabled = true;
+
+    scoreboardList.style.display = 'none';
+
+    holes.forEach(({ mole }) => mole.classList.remove('up'));
+
+
+
+    bgm.currentTime = 0;
+
+    bgm.play().catch(err => {
+
+      console.log('BGM autoplay 제한됨:', err);
+
+    });
+
+
+
+    updateDifficulty();
+
+    showMoles();
+
+    clearInterval(gameTimer);
+
+    gameTimer = setInterval(showMoles, moleInterval);
+
+
+
+    startCountdown();
+
+  }
+
+
+
+  createGrid();
+
+  displayScores();
+
+  startBtn.addEventListener('click', startGame);
+
+</script>
+
+
+
+</body>
+
+</html>
