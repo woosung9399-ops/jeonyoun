@@ -25,9 +25,22 @@
     padding: 10px 16px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.15);
   }
-  .logo .word { font-size: 20px; font-weight: 700; }
-  .logo { cursor:pointer; }
-  .hud button { padding:6px 12px; font-size:16px; cursor:pointer }
+  #homeLogo {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+  }
+  #homeLogo img {
+    height: 40px;       /* 헤더 높이에 맞게 */
+    width: auto;
+    object-fit: contain; /* 이미지 전체가 잘리지 않고 보이도록 */
+    image-rendering: auto; /* 픽셀 깨짐 방지 */
+  }
+  .hud button {
+    padding:6px 12px;
+    font-size:16px;
+    cursor:pointer
+  }
   h1 { margin: 16px 0 10px; }
   #scoreboard, #timer {
     font-size: 18px;
@@ -93,9 +106,8 @@
 
 <!-- 교체된 헤더 -->
 <header>
-  <div id="homeLogo" class="logo" role="button" tabindex="0" title="초기 화면으로 이동">
-    <span class="word">mult<span class="i">ı<span class="dot" aria-hidden="true"></span></span>campus</span>
-    <span class="sr-only">multicampus</span>
+  <div id="homeLogo" role="button" tabindex="0" title="초기 화면으로 이동">
+    <img src="https://api.multicampus.com/ssf/v1/resource/public/images/FILBS202506207041267" alt="multicampus 로고">
   </div>
   <div class="hud" aria-live="polite">
     <button id="pauseBtn" class="btn">⏸️ Pause</button>
@@ -116,7 +128,7 @@
 <audio id="bgm" src="https://www.dropbox.com/scl/fi/05ytgdfewmcgokh7onrzp/770707__audiocoffee__children-game-loop-ver.wav?rlkey=elzlfgeetnf16zieb8nrmri5j&raw=1" loop></audio>
 <audio id="hitSound" src="https://www.dropbox.com/scl/fi/azmq2hkl45wns76novc2k/85591__jankoehl__hit-wood10.wav?rlkey=rcjxyhs5frxc1qaw0o2eegpku&raw=1"></audio>
 
-<!-- 푸터 추가 -->
+<!-- 푸터 -->
 <footer>© multicampus arcade </footer>
 
 <script>
