@@ -5,511 +5,251 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Whack-a-Mole 🎯</title>
 <style>
-  :root{
-    --cell:110px;
-    --gap:12px;
-    --panel:#ffffffcc;
-    --bg-overlay: rgba(0,0,0,.35);
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: sans-serif;
+    background: url('https://i.postimg.cc/QCs9xJCp/image.png') no-repeat center center fixed;
+    background-size: cover;
+    margin: 0;
+    padding: 20px;
+    min-height: 100vh;
   }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0; display:flex; flex-direction:column; align-items:center;
-    font-family: ui-sans-serif, system-ui, -apple-system, "Pretendard","Segoe UI",sans-serif;
-    background: url('https://i.postimg.cc/QCs9xJCp/image.png') no-repeat center/cover fixed;
-    padding:16px;
+  header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255,255,255,0.85);
+    padding: 10px 16px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
   }
-
-  header{
-    display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:center;
-    padding:10px 14px; border-radius:12px; background:var(--panel); backdrop-filter: blur(6px);
-    box-shadow: 0 4px 16px rgba(0,0,0,.15);
-    width:min(720px, 100%);
+  .logo .word { font-size: 20px; font-weight: 700; }
+  .logo { cursor:pointer; }
+  .hud button { padding:6px 12px; font-size:16px; cursor:pointer }
+  h1 { margin: 16px 0 10px; }
+  #scoreboard, #timer {
+    font-size: 18px;
+    margin-bottom: 10px;
   }
-  h1{margin:0; font-size:20px}
-  .stats{display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-left:auto}
-  .stat{padding:6px 10px; background:#fff; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,.15); font-weight:600}
-  .controls{display:flex; gap:8px; align-items:center}
-  button, .toggle{
-    border:0; border-radius:10px; padding:8px 14px; font-size:16px; font-weight:700; cursor:pointer;
-    background:#111; color:#fff; box-shadow:0 4px 12px rgba(0,0,0,.2);
+  #grid {
+    display: grid;
+    grid-template: repeat(3, 100px) / repeat(3, 100px);
+    gap: 10px;
   }
-  .subbtn{background:#444}
-  .muted{opacity:.7}
-
-  .timerbar-wrap{width:min(720px,100%); height:10px; background:#ffffffa8; border-radius:999px; overflow:hidden; margin:12px 0}
-  .timerbar{height:100%; width:100%; background:linear-gradient(90deg,#22c55e,#ef4444); transform-origin:left center}
-
-  main{
-    width:min(720px, 100%); background:var(--panel); backdrop-filter: blur(6px);
-    border-radius:16px; padding:14px; box-shadow: 0 8px 24px rgba(0,0,0,.18);
+  .hole {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    background: #654;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: inset 0 0 10px #210;
   }
-  #grid{
-    display:grid;
-    grid-template-columns: repeat(3, var(--cell));
-    grid-auto-rows: var(--cell);
-    gap:var(--gap); justify-content:center;
+  .mole {
+    position: absolute;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    cursor: pointer;
+    transition: top 0.2s;
   }
-  @media (max-width:480px){
-    :root{ --cell:96px; --gap:10px }
+  .up { top: 10px; }
+  button {
+    margin-top: 15px;
+    padding: 8px 16px;
+    font-size: 16px;
   }
-  .hole{
-    position:relative; width:var(--cell); height:var(--cell);
-    border-radius:50%; overflow:hidden; background:#6a4a3c;
-    box-shadow: inset 0 8px 24px #2a160f;
+  #scoreboard-list {
+    margin-top: 15px;
+    width: 300px;
   }
-  .mole{
-    position:absolute; left:50%; top:65%;
-    transform: translate(-50%,-50%);
-    width:80%; max-width:86px; cursor:pointer; user-select:none; -webkit-user-drag:none;
-    transition: transform .18s ease, top .18s ease, filter .1s ease;
-    filter: drop-shadow(0 4px 6px rgba(0,0,0,.35));
+  #scoreboard-list h2 { margin-bottom: 8px; }
+  #scoreboard-list ul {
+    list-style: none;
+    padding: 0;
   }
-  .mole.up{ top:28% }
-  .mole.hit{ transform: translate(-50%,-50%) scale(.92) rotate(-6deg) }
-
-  .tag{
-    position:absolute; top:8px; right:8px; font-size:12px; padding:3px 6px; border-radius:999px; color:#fff; font-weight:700;
-    backdrop-filter: blur(4px);
+  #scoreboard-list li {
+    background: #fff;
+    margin-bottom: 5px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
   }
-  .tag.combo{ background:#0ea5e9cc }
-  .tag.diff{ background:#a855f7cc; right:auto; left:8px }
-
-  /* Modal */
-  .overlay{
-    position:fixed; inset:0; background:var(--bg-overlay); display:none; align-items:center; justify-content:center; padding:16px; z-index:10;
-  }
-  .overlay.show{ display:flex }
-  .modal{
-    width:min(420px, 100%); background:#fff; border-radius:14px; padding:16px; box-shadow: 0 8px 24px rgba(0,0,0,.3)
-  }
-  .modal h2{ margin:0 0 8px }
-  .row{ display:flex; gap:8px; align-items:center; margin-top:8px }
-  input[type="text"]{ flex:1; padding:10px 12px; border:1px solid #ddd; border-radius:10px; font-size:16px }
-  .center{ text-align:center }
-
-  /* Scoreboard */
-  #scoreboard-list{ width:min(720px,100%); margin-top:12px; display:none }
-  #scoreboard-list h2{ margin:6px 0 8px }
-  #scoreboard-list ul{ list-style:none; padding:0; margin:0 }
-  #scoreboard-list li{
-    background:#fff; margin-bottom:6px; padding:8px 12px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,.2);
-    display:flex; justify-content:space-between; font-weight:600
-  }
-
-  /* Motion accessibility */
-  @media (prefers-reduced-motion: reduce){
-    .mole{ transition: none }
-    .timerbar{ transition: none }
+  footer {
+    margin-top: auto;
+    width: 100%;
+    text-align: center;
+    padding: 12px;
+    background: rgba(0,0,0,0.7);
+    color: #fff;
+    font-size: 14px;
   }
 </style>
 </head>
 <body>
 
+<!-- 교체된 헤더 -->
 <header>
-  <h1>두더지 잡기 대작전</h1>
-  <div class="stats">
-    <div class="stat">점수 <span id="score">0</span></div>
-    <div class="stat">콤보 <span id="combo">x1</span></div>
-    <div class="stat">난이도 <span id="diff">1</span></div>
-    <div class="controls">
-      <button id="start" title="게임 시작/재시작">Start</button>
-      <button id="pause" class="subbtn" title="일시정지/재개">Pause</button>
-      <button id="mute" class="subbtn" title="사운드 켜기/끄기">🔊</button>
-    </div>
+  <div id="homeLogo" class="logo" role="button" tabindex="0" title="초기 화면으로 이동">
+    <span class="word">mult<span class="i">ı<span class="dot" aria-hidden="true"></span></span>campus</span>
+    <span class="sr-only">multicampus</span>
+  </div>
+  <div class="hud" aria-live="polite">
+    <button id="pauseBtn" class="btn">⏸️ Pause</button>
   </div>
 </header>
 
-<div class="timerbar-wrap" aria-hidden="true"><div id="timerbar" class="timerbar"></div></div>
+<h1>두더지 잡기 대작전</h1>
+<div id="timer">Time left: 30s</div>
+<div id="scoreboard">Score: <span id="score">0</span></div>
+<div id="grid"></div>
+<button id="start">Start Game</button>
 
-<main>
-  <div id="grid" aria-label="게임 보드" role="grid"></div>
-  <div class="tag combo" id="comboTag" style="display:none;">Combo!</div>
-  <div class="tag diff" id="diffTag">Lv.1</div>
-</main>
-
-<section id="scoreboard-list">
+<div id="scoreboard-list" style="display:none;">
   <h2>👑 Scoreboard</h2>
   <ul id="scores"></ul>
-</section>
+</div>
 
-<!-- 🔊 오디오 -->
 <audio id="bgm" src="https://www.dropbox.com/scl/fi/05ytgdfewmcgokh7onrzp/770707__audiocoffee__children-game-loop-ver.wav?rlkey=elzlfgeetnf16zieb8nrmri5j&raw=1" loop></audio>
 <audio id="hitSound" src="https://www.dropbox.com/scl/fi/azmq2hkl45wns76novc2k/85591__jankoehl__hit-wood10.wav?rlkey=rcjxyhs5frxc1qaw0o2eegpku&raw=1"></audio>
-<audio id="badSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_31b1e6f2d2.mp3?filename=error-126627.mp3"></audio>
-<audio id="goodSound" src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_5b1e1d1bfa.mp3?filename=success-1-6297.mp3"></audio>
 
-<!-- 이름 입력 모달 -->
-<div class="overlay" id="overlay">
-  <div class="modal">
-    <h2>Time’s up! ⏰</h2>
-    <p class="center">당신의 점수는 <strong id="finalScore">0</strong> 입니다.</p>
-    <div class="row">
-      <input id="playerName" type="text" placeholder="이름을 입력하세요 (기본: Player)" />
-      <button id="saveScoreBtn">저장</button>
-    </div>
-  </div>
-</div>
+<!-- 푸터 추가 -->
+<footer>© multicampus arcade </footer>
 
 <script>
   const grid = document.getElementById('grid');
   const scoreEl = document.getElementById('score');
-  const comboEl = document.getElementById('combo');
-  const diffEl  = document.getElementById('diff');
-  const startBtn= document.getElementById('start');
-  const pauseBtn= document.getElementById('pause');
-  const muteBtn = document.getElementById('mute');
-  const timerBar= document.getElementById('timerbar');
-  const comboTag= document.getElementById('comboTag');
-  const diffTag = document.getElementById('diffTag');
-
-  const overlay = document.getElementById('overlay');
-  const finalScoreEl = document.getElementById('finalScore');
-  const playerNameInput = document.getElementById('playerName');
-  const saveScoreBtn = document.getElementById('saveScoreBtn');
-
+  const startBtn = document.getElementById('start');
+  const timerEl = document.getElementById('timer');
   const scoreboardList = document.getElementById('scoreboard-list');
   const scoresUl = document.getElementById('scores');
-
   const bgm = document.getElementById('bgm');
   const hitSound = document.getElementById('hitSound');
-  const badSound = document.getElementById('badSound');
-  const goodSound = document.getElementById('goodSound');
 
   const holes = [];
   let score = 0;
-  let combo = 1;
-  let comboStreak = 0;
-  let maxCombo = 1;
-
-  const GAME_DURATION = 30; // seconds
-  let timeLeft = GAME_DURATION;
-
-  // Difficulty state
-  let level = 1;
-  let moleIntervalMs = 900;       // spawn cadence
-  let visibleTimeMs  = 850;       // up-time
-  let concurrentsMax = 1;         // simultaneous moles
-
-  let spawnLoop = null;
-  let countdownLoop = null;
-  let paused = false;
-  let running = false;
-  let muted = false;
-
+  let gameTimer = null;
+  let countdownTimer = null;
+  const gameDuration = 30;
+  let timeLeft = gameDuration;
+  let moleInterval = 1000;
+  const moleVisibleTime = 800;
   const moleImgUrl = 'https://i.postimg.cc/D0p0cdj3/pngegg.png';
-  const goldenImg  = 'https://i.postimg.cc/fT0Vg3kQ/golden-mole.png'; // fallback if 404 -> use normal
-  const bombImg    = 'https://i.postimg.cc/SK6zqXSp/bomb-mole.png';
 
-  function createGrid(){
-    const size = 9;
-    for(let i=0;i<size;i++){
+  function createGrid() {
+    for(let i=0; i<9; i++) {
       const hole = document.createElement('div');
-      hole.className = 'hole';
+      hole.classList.add('hole');
       const mole = document.createElement('img');
       mole.src = moleImgUrl;
-      mole.className = 'mole';
-      mole.alt = '두더지';
-      mole.draggable = false;
-
+      mole.classList.add('mole');
       hole.appendChild(mole);
       grid.appendChild(hole);
-      holes.push({hole, mole, up:false, hitLock:false, type:'normal'});
-
-      const onHit = (e)=>whack(i, e);
-      mole.addEventListener('click', onHit);
-      mole.addEventListener('touchstart', onHit, {passive:true});
+      holes.push({hole, mole});
+      mole.addEventListener('click', whack);
     }
   }
 
-  function setRunningUI(state){
-    running = state;
-    startBtn.textContent = state ? 'Restart' : 'Start';
-    pauseBtn.textContent = state && !paused ? 'Pause' : 'Resume';
+  function updateDifficulty() {
+    moleInterval = Math.max(300, 1000 - Math.floor(score / 10) * 100);
   }
 
-  function updateTimerBar(){
-    const ratio = Math.max(0, timeLeft)/GAME_DURATION;
-    timerBar.style.transform = `scaleX(${ratio})`;
-  }
-
-  function vibrate(ms=30){
-    if (navigator.vibrate) navigator.vibrate(ms);
-  }
-
-  function play(sound){
-    if(muted) return;
-    try{
-      // allow overlapping by cloning short sfx
-      if(sound !== bgm){
-        const c = sound.cloneNode();
-        c.volume = sound.volume ?? 1;
-        c.play().catch(()=>{});
-      } else {
-        sound.play().catch(()=>{});
-      }
-    }catch{}
-  }
-
-  function setMuted(flag){
-    muted = flag;
-    bgm.muted = flag;
-    muteBtn.textContent = flag ? '🔇' : '🔊';
-    muteBtn.classList.toggle('muted', flag);
-  }
-
-  function resetState(){
-    score = 0; combo = 1; comboStreak = 0; maxCombo = 1;
-    level = 1; moleIntervalMs = 900; visibleTimeMs = 850; concurrentsMax = 1;
-    timeLeft = GAME_DURATION; updateTimerBar();
-    scoreEl.textContent = 0; comboEl.textContent = 'x1'; diffEl.textContent = '1';
-    diffTag.textContent = 'Lv.1';
-    hideAll();
-  }
-
-  function hideAll(){
-    holes.forEach(h=>{
-      h.mole.classList.remove('up','hit');
-      h.up=false; h.hitLock=false; h.type='normal';
-      h.mole.src = moleImgUrl;
-    });
-  }
-
-  function difficultyStep(){
-    // scale with score & elapsed time
-    const elapsed = GAME_DURATION - timeLeft;
-    const scoreFactor = Math.floor(score / 10);        // every 10 points
-    const timeFactor  = Math.floor(elapsed / 8);       // every 8s
-    const newLevel = 1 + Math.max(scoreFactor, timeFactor);
-    if(newLevel !== level){
-      level = newLevel;
-      // spawn faster, shorter visibility, more concurrents
-      moleIntervalMs = Math.max(260, 900 - (level-1)*90);
-      visibleTimeMs  = Math.max(420, 850 - (level-1)*70);
-      concurrentsMax = Math.min(3, 1 + Math.floor((level-1)/2));
-      diffEl.textContent = String(level);
-      diffTag.textContent = `Lv.${level}`;
-      flash(diffTag);
-      // rearm spawn cadence
-      if(spawnLoop){ clearInterval(spawnLoop); spawnLoop = setInterval(spawnTick, moleIntervalMs); }
+  function showMoles() {
+    let moleCount = score>=25 ? 3 : score>=10 ? 2 : 1;
+    let holesAvailable = holes.filter(h => !h.mole.classList.contains('up'));
+    moleCount = Math.min(moleCount, holesAvailable.length);
+    for(let i=0; i<moleCount; i++) {
+      const idx = Math.floor(Math.random() * holesAvailable.length);
+      const { mole } = holesAvailable[idx];
+      mole.classList.add('up');
+      setTimeout(()=> mole.classList.remove('up'), moleVisibleTime);
+      holesAvailable.splice(idx, 1);
     }
   }
 
-  function flash(el){
-    el.style.transform = 'scale(1.08)';
-    el.style.transition = 'transform .18s';
-    requestAnimationFrame(()=>{ el.style.transform='scale(1)'; });
-  }
-
-  function spawnTick(){
-    // choose N empty holes
-    const vacant = holes.filter(h=>!h.up);
-    if(vacant.length===0) return;
-
-    const count = Math.min(concurrentsMax, vacant.length);
-    for(let i=0;i<count;i++){
-      const pick = Math.floor(Math.random()*vacant.length);
-      const cell = vacant.splice(pick,1)[0];
-      raise(cell);
+  function whack(e) {
+    if(!e.isTrusted) return;
+    if(this.classList.contains('up')) {
+      score++;
+      scoreEl.textContent = score;
+      this.classList.remove('up');
+      hitSound.currentTime = 0;
+      hitSound.play();
+      clearInterval(gameTimer);
+      updateDifficulty();
+      gameTimer = setInterval(showMoles, moleInterval);
+      showMoles();
     }
   }
 
-  function raise(cell){
-    cell.up = true; cell.hitLock=false; cell.type='normal';
-    // rare special types
-    const roll = Math.random();
-    if(roll > 0.97){ // ~3% golden
-      cell.type='golden';
-      cell.mole.src = goldenImg;
-    } else if(roll < 0.04){ // ~4% bomb
-      cell.type='bomb';
-      cell.mole.src = bombImg;
-    } else {
-      cell.mole.src = moleImgUrl;
-    }
-
-    cell.mole.classList.add('up');
-    const ttl = visibleTimeMs + Math.random()*140;
-
-    cell.hideTO && clearTimeout(cell.hideTO);
-    cell.hideTO = setTimeout(()=> lower(cell, /*miss*/true), ttl);
-  }
-
-  function lower(cell, missed=false){
-    cell.mole.classList.remove('up','hit');
-    cell.up=false;
-    if(missed){
-      // combo reset & small penalty
-      if(combo>1){
-        combo=1; comboStreak=0; comboEl.textContent='x1';
-        showComboTag('Miss! Combo reset');
-      }
-    }
-  }
-
-  function whack(index, e){
-    const cell = holes[index];
-    if(!cell.up || cell.hitLock) return;
-    cell.hitLock = true;
-
-    // score impact
-    let delta = 1;
-    if(cell.type==='golden'){ delta = 5; play(goodSound); }
-    else if(cell.type==='bomb'){ delta = -3; play(badSound); }
-    else { play(hitSound); }
-
-    // combo logic (only if not bomb)
-    if(cell.type!=='bomb'){
-      comboStreak++;
-      if(comboStreak>=3 && combo<4){ // x2 at 3, x3 at 6, x4 at 9…
-        combo = Math.min(4, 1 + Math.floor(comboStreak/3));
-        maxCombo = Math.max(maxCombo, combo);
-        comboEl.textContent = 'x'+combo;
-        showComboTag(`Combo x${combo}!`);
-      }
-    } else {
-      combo = 1; comboStreak = 0; comboEl.textContent = 'x1';
-    }
-
-    const gain = delta>0 ? delta*combo : delta;
-    score = Math.max(0, score + gain);
-    scoreEl.textContent = score;
-    if(gain>0) vibrate(15); else vibrate(40);
-
-    // hit feedback
-    cell.mole.classList.add('hit');
-    setTimeout(()=>cell.mole.classList.remove('hit'), 120);
-
-    // remove & free hole
-    clearTimeout(cell.hideTO);
-    lower(cell, /*miss*/false);
-
-    // on-progress difficulty update
-    difficultyStep();
-  }
-
-  function showComboTag(text){
-    comboTag.textContent = text;
-    comboTag.style.display='block';
-    comboTag.style.opacity='1';
-    comboTag.style.transform='translateY(0)';
-    comboTag.style.transition='opacity .4s, transform .4s';
-    requestAnimationFrame(()=>{
-      comboTag.style.opacity='0';
-      comboTag.style.transform='translateY(-8px)';
-      setTimeout(()=>{ comboTag.style.display='none' }, 420);
-    });
-  }
-
-  function startCountdown(){
-    timeLeft = GAME_DURATION; updateTimerBar();
-    countdownLoop && clearInterval(countdownLoop);
-    countdownLoop = setInterval(()=>{
-      if(paused) return;
+  function startCountdown() {
+    timeLeft = gameDuration;
+    timerEl.textContent = `Time left: ${timeLeft}s`;
+    countdownTimer = setInterval(()=>{
       timeLeft--;
-      updateTimerBar();
-      difficultyStep();
-      if(timeLeft<=0){
-        clearInterval(countdownLoop);
+      timerEl.textContent = `Time left: ${timeLeft}s`;
+      if(timeLeft <= 0) {
+        clearInterval(countdownTimer);
         endGame();
       }
-    }, 1000);
+    },1000);
   }
 
-  function startSpawning(){
-    spawnLoop && clearInterval(spawnLoop);
-    spawnLoop = setInterval(()=>{
-      if(!paused) spawnTick();
-    }, moleIntervalMs);
+  function endGame() {
+    bgm.pause();
+    bgm.currentTime = 0;
+    clearInterval(gameTimer);
+    alert(`Time's up! Your score: ${score}`);
+    let playerName = prompt('Enter your name for the scoreboard:','Player') || 'Player';
+    saveScore(playerName, score);
+    displayScores();
+    startBtn.disabled = false;
   }
 
-  function startGame(){
-    resetState();
-    setRunningUI(true);
-    scoreboardList.style.display='none';
-    setMuted(muted); // keep state
-    try{ if(!muted){ bgm.currentTime=0; bgm.play(); } }catch{}
-    paused=false;
-
-    startSpawning();
-    spawnTick(); // immediate first spawn
-    startCountdown();
+  function saveScore(name, score) {
+    const storedScores = JSON.parse(localStorage.getItem('whackScores')) || [];
+    storedScores.push({name, score});
+    storedScores.sort((a,b)=>b.score-a.score);
+    const topScores = storedScores.slice(0,10);
+    localStorage.setItem('whackScores', JSON.stringify(topScores));
   }
 
-  function pauseGame(){
-    if(!running) return;
-    paused = !paused;
-    pauseBtn.textContent = paused ? 'Resume' : 'Pause';
-    if(paused){ bgm.pause(); } else { if(!muted) bgm.play().catch(()=>{}); }
-  }
-
-  function endGame(){
-    bgm.pause(); bgm.currentTime=0;
-    spawnLoop && clearInterval(spawnLoop);
-    countdownLoop && clearInterval(countdownLoop);
-    hideAll();
-    setRunningUI(false);
-
-    // open modal to save score
-    finalScoreEl.textContent = score;
-    playerNameInput.value = localStorage.getItem('whackLastName') || '';
-    overlay.classList.add('show');
-  }
-
-  function saveScore(name, scoreVal){
-    const stored = JSON.parse(localStorage.getItem('whackScores')||'[]');
-    stored.push({name, score: scoreVal, when: new Date().toISOString(), maxCombo});
-    stored.sort((a,b)=> b.score - a.score || (b.maxCombo - a.maxCombo));
-    const top10 = stored.slice(0,10);
-    localStorage.setItem('whackScores', JSON.stringify(top10));
-    localStorage.setItem('whackLastName', name);
-  }
-
-  function displayScores(){
-    const stored = JSON.parse(localStorage.getItem('whackScores')||'[]');
-    scoresUl.innerHTML = '';
-    if(stored.length===0){
-      scoresUl.innerHTML = '<li><span>아직 기록이 없어요.</span><span>—</span></li>';
+  function displayScores() {
+    const storedScores = JSON.parse(localStorage.getItem('whackScores')) || [];
+    scoresUl.innerHTML='';
+    if(storedScores.length===0){
+      scoresUl.innerHTML='<li>No scores yet.</li>';
     } else {
-      stored.forEach((row,i)=>{
-        const li = document.createElement('li');
-        const left = document.createElement('span');
-        left.textContent = `${i+1}. ${row.name}`;
-        const right = document.createElement('span');
-        right.textContent = `${row.score} (max ${row.maxCombo}x)`;
-        li.append(left,right);
+      storedScores.forEach(({name,score})=>{
+        const li=document.createElement('li');
+        li.textContent=`${name}: ${score}`;
         scoresUl.appendChild(li);
       });
     }
     scoreboardList.style.display='block';
   }
 
-  // Events
-  startBtn.addEventListener('click', startGame);
-  pauseBtn.addEventListener('click', pauseGame);
-  muteBtn.addEventListener('click', ()=> setMuted(!muted));
+  function startGame() {
+    score=0;
+    scoreEl.textContent=score;
+    startBtn.disabled=true;
+    scoreboardList.style.display='none';
+    holes.forEach(({mole})=>mole.classList.remove('up'));
+    bgm.currentTime=0;
+    bgm.play().catch(err=>console.log('BGM autoplay 제한됨:',err));
+    updateDifficulty();
+    showMoles();
+    clearInterval(gameTimer);
+    gameTimer=setInterval(showMoles,moleInterval);
+    startCountdown();
+  }
 
-  saveScoreBtn.addEventListener('click', ()=>{
-    let name = playerNameInput.value.trim();
-    if(!name) name = 'Player';
-    saveScore(name, score);
-    overlay.classList.remove('show');
-    displayScores();
-  });
-
-  overlay.addEventListener('click', (e)=>{
-    if(e.target===overlay){ overlay.classList.remove('show'); displayScores(); }
-  });
-
-  // init
   createGrid();
   displayScores();
-  setMuted(false);
-
-  // Space = pause/resume
-  window.addEventListener('keydown', (e)=>{
-    if(e.code==='Space'){ e.preventDefault(); pauseGame(); }
-  });
+  startBtn.addEventListener('click', startGame);
 </script>
 </body>
 </html>
