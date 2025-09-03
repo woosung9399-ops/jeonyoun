@@ -2,134 +2,216 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Whack-a-Mole 🎯</title>
 <style>
-  body {
+  :root{
+    /* 셀 크기를 반응형으로: 모바일~데스크톱까지 자연스레 확대/축소 */
+    --cell: clamp(82px, 22vw, 120px);
+    --gap:  clamp(8px, 2.6vw, 14px);
+    --header-pad: max(10px, env(safe-area-inset-top, 0));
+    --side-pad: max(12px, env(safe-area-inset-left, 0));
+  }
+
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body { height: 100%; }
+
+  body{
+    margin: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    font-family: sans-serif;
-    background: url('https://i.postimg.cc/QCs9xJCp/image.png') no-repeat center center fixed;
-    background-size: cover;
-    margin: 0;
-    padding: 20px;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Pretendard","Segoe UI",sans-serif;
+
+    /* ✅ 배경을 전체로 덮기 */
+    background: url('https://i.postimg.cc/QCs9xJCp/image.png') center center / cover no-repeat fixed;
+    /* 모바일에서 fixed가 버벅일 수 있어 아래에서 해제 */
+    padding: 0;
     min-height: 100vh;
   }
-  header {
+
+  /* ✅ 헤더 - 블러 제거 + 완전 투명 + 안전영역 패딩 */
+  header{
+    position: sticky;
+    top: 0;
+    z-index: 10;
     width: 100%;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    background: rgba(255,255,255,0.85);
-    padding: 10px 16px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    justify-content: space-between;
+
+    padding: var(--header-pad) calc(var(--side-pad) + 12px) 10px calc(var(--side-pad) + 12px);
+    background: transparent;          /* 투명 */
+    backdrop-filter: none;            /* 블러 제거 */
+    -webkit-backdrop-filter: none;
+    box-shadow: none;                 /* 그림자 제거 */
   }
-  #homeLogo {
-    display: flex;
+
+  /* ✅ 로고: 이미지 전체 보이고 픽셀 깨짐 방지, 배경 투명 */
+  #homeLogo{
+    display: inline-flex;
     align-items: center;
     cursor: pointer;
   }
-  #homeLogo img {
-    height: 40px;       /* 헤더 높이에 맞게 */
+  #homeLogo img{
+    height: 40px;                 /* 필요시 여기만 조절 */
     width: auto;
-    object-fit: contain; /* 이미지 전체가 잘리지 않고 보이도록 */
-    image-rendering: auto; /* 픽셀 깨짐 방지 */
+    object-fit: contain;          /* 전체가 보이도록 */
+    image-rendering: auto;        /* 픽셀 보존 */
+    background: transparent;      /* 이미지 영역 배경 투명 */
+    display: block;
   }
-  .hud button {
-    padding:6px 12px;
-    font-size:16px;
-    cursor:pointer
+
+  .hud .btn{
+    min-height: 44px;             /* 터치 타겟 확보 */
+    min-width: 44px;
+    padding: 8px 14px;
+    font-size: 16px;
+    font-weight: 700;
+    border: 0;
+    border-radius: 10px;
+    cursor: pointer;
+    background: rgba(17,17,17,.85);
+    color: #fff;
   }
-  h1 { margin: 16px 0 10px; }
-  #scoreboard, #timer {
-    font-size: 18px;
-    margin-bottom: 10px;
+
+  /* 본문 타이틀/정보판 */
+  .wrap{
+    width: min(760px, 100%);
+    padding: 12px calc(var(--side-pad) + 12px) 0;
   }
-  #grid {
+  h1{
+    margin: 8px 0 6px;
+    color: #fff;
+    text-shadow: 0 2px 10px rgba(0,0,0,.4);
+    font-size: clamp(18px, 4.5vw, 24px);
+    font-weight: 800;
+  }
+  #timer, #scoreboard{
+    color: #fff;
+    text-shadow: 0 1px 6px rgba(0,0,0,.45);
+    font-size: clamp(14px, 3.8vw, 18px);
+    margin-bottom: 6px;
+  }
+
+  /* ✅ 반응형 그리드 */
+  #grid{
     display: grid;
-    grid-template: repeat(3, 100px) / repeat(3, 100px);
-    gap: 10px;
+    grid-template-columns: repeat(3, var(--cell));
+    grid-auto-rows: var(--cell);
+    gap: var(--gap);
+    justify-content: center;
+    width: 100%;
+    margin: 8px 0 12px;
   }
-  .hole {
+
+  .hole{
     position: relative;
-    width: 100px;
-    height: 100px;
-    background: #654;
+    width: var(--cell);
+    height: var(--cell);
     border-radius: 50%;
     overflow: hidden;
-    box-shadow: inset 0 0 10px #210;
+    background: #6a4a3c;
+    box-shadow: inset 0 8px 24px #2a160f, 0 6px 18px rgba(0,0,0,.25);
   }
-  .mole {
+
+  .mole{
     position: absolute;
-    top: 60px;
+    top: 60%;
     left: 50%;
-    transform: translateX(-50%);
-    width: 80px;
+    transform: translate(-50%, -50%);
+    width: 78%;
+    max-width: 100%;
+    user-select: none;
+    -webkit-user-drag: none;
     cursor: pointer;
-    transition: top 0.2s;
+    transition: top .18s ease;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,.35));
   }
-  .up { top: 10px; }
-  button {
-    margin-top: 15px;
-    padding: 8px 16px;
-    font-size: 16px;
+  .mole.up{ top: 28%; }
+
+  button#start{
+    display: inline-block;
+    min-height: 44px; min-width: 120px;
+    padding: 10px 20px;
+    font-size: 16px; font-weight: 800;
+    border-radius: 12px;
+    border: 0;
+    background: #111; color:#fff;
+    box-shadow: 0 6px 18px rgba(0,0,0,.25);
   }
-  #scoreboard-list {
-    margin-top: 15px;
-    width: 300px;
+
+  /* 스코어보드 카드 */
+  #scoreboard-list{
+    width: min(760px, 100%);
+    padding: 0 calc(var(--side-pad) + 12px);
+    margin: 12px 0 18px;
   }
-  #scoreboard-list h2 { margin-bottom: 8px; }
-  #scoreboard-list ul {
-    list-style: none;
-    padding: 0;
+  #scoreboard-list h2{
+    margin: 6px 0 8px;
+    color:#fff; text-shadow:0 1px 6px rgba(0,0,0,.45);
+    font-size: clamp(16px, 4vw, 20px);
   }
-  #scoreboard-list li {
-    background: #fff;
-    margin-bottom: 5px;
-    padding: 6px 10px;
-    border-radius: 4px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  #scores{ list-style: none; padding: 0; margin: 0; }
+  #scores li{
+    background: rgba(255,255,255,.9);
+    margin-bottom: 6px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.18);
+    display: flex; justify-content: space-between;
+    font-weight: 700;
   }
-  footer {
+
+  footer{
     margin-top: auto;
     width: 100%;
     text-align: center;
-    padding: 12px;
-    background: rgba(0,0,0,0.7);
+    padding: 14px calc(var(--side-pad) + 12px) max(12px, env(safe-area-inset-bottom, 0));
+    background: rgba(0,0,0,.6);
     color: #fff;
     font-size: 14px;
+  }
+
+  /* 📱 모바일 최적화: 배경 fixed 해제(스크롤 저커 방지), 그리드 여백 조정 */
+  @media (max-width: 600px){
+    body{ background-attachment: scroll; }
+    #grid{ gap: max(8px, 2vw); }
   }
 </style>
 </head>
 <body>
 
-<!-- 교체된 헤더 -->
+<!-- 🔝 투명 헤더 (블러 없음) -->
 <header>
   <div id="homeLogo" role="button" tabindex="0" title="초기 화면으로 이동">
-    <img src="https://api.multicampus.com/ssf/v1/resource/public/images/FILBS202506207041267" alt="multicampus 로고">
+    <img src="https://api.multicampus.com/ssf/v1/resource/public/images/FILBS202506207041267" alt="multicampus 로고" />
   </div>
   <div class="hud" aria-live="polite">
     <button id="pauseBtn" class="btn">⏸️ Pause</button>
   </div>
 </header>
 
-<h1>두더지 잡기 대작전</h1>
-<div id="timer">Time left: 30s</div>
-<div id="scoreboard">Score: <span id="score">0</span></div>
-<div id="grid"></div>
-<button id="start">Start Game</button>
+<div class="wrap">
+  <h1>두더지 잡기 대작전</h1>
+  <div id="timer">Time left: 30s</div>
+  <div id="scoreboard">Score: <span id="score">0</span></div>
 
-<div id="scoreboard-list" style="display:none;">
-  <h2>👑 Scoreboard</h2>
-  <ul id="scores"></ul>
+  <div id="grid"></div>
+  <button id="start">Start Game</button>
+
+  <div id="scoreboard-list" style="display:none;">
+    <h2>👑 Scoreboard</h2>
+    <ul id="scores"></ul>
+  </div>
 </div>
 
+<!-- 🔊 오디오 -->
 <audio id="bgm" src="https://www.dropbox.com/scl/fi/05ytgdfewmcgokh7onrzp/770707__audiocoffee__children-game-loop-ver.wav?rlkey=elzlfgeetnf16zieb8nrmri5j&raw=1" loop></audio>
 <audio id="hitSound" src="https://www.dropbox.com/scl/fi/azmq2hkl45wns76novc2k/85591__jankoehl__hit-wood10.wav?rlkey=rcjxyhs5frxc1qaw0o2eegpku&raw=1"></audio>
 
-<!-- 푸터 -->
-<footer>© multicampus arcade </footer>
+<footer>© multicampus arcade</footer>
 
 <script>
   const grid = document.getElementById('grid');
@@ -145,8 +227,10 @@
   let score = 0;
   let gameTimer = null;
   let countdownTimer = null;
+
   const gameDuration = 30;
   let timeLeft = gameDuration;
+
   let moleInterval = 1000;
   const moleVisibleTime = 800;
   const moleImgUrl = 'https://i.postimg.cc/D0p0cdj3/pngegg.png';
@@ -251,13 +335,17 @@
     scoreboardList.style.display='none';
     holes.forEach(({mole})=>mole.classList.remove('up'));
     bgm.currentTime=0;
-    bgm.play().catch(err=>console.log('BGM autoplay 제한됨:',err));
+    bgm.play().catch(()=>{});
     updateDifficulty();
     showMoles();
     clearInterval(gameTimer);
     gameTimer=setInterval(showMoles,moleInterval);
     startCountdown();
   }
+
+  // 헤더 로고/일시정지 버튼 이벤트 훅(필요 시 확장)
+  document.getElementById('homeLogo').addEventListener('click', ()=>window.scrollTo({top:0, behavior:'smooth'}));
+  document.getElementById('pauseBtn').addEventListener('click', ()=>alert('일시정지 기능을 연결하려면 알려주세요!'));
 
   createGrid();
   displayScores();
