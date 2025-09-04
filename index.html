@@ -30,7 +30,12 @@
     background: transparent; backdrop-filter:none; -webkit-backdrop-filter:none; box-shadow:none;
   }
   #homeLogo{ display:inline-flex; align-items:center; cursor:pointer; }
-  #homeLogo img{ height:40px; width:auto; object-fit:contain; image-rendering:auto; background:transparent; display:block; }
+  /* ⬇ 로고 배경을 화면에서 투명하게 보이도록 처리 */
+  #homeLogo img{
+    height:40px; width:auto; object-fit:contain; image-rendering:auto;
+    background: transparent; display:block;
+    mix-blend-mode: multiply; /* 흰 배경을 사실상 투명으로 */
+  }
 
   .hud .btn{
     min-height:44px; min-width:44px; padding:8px 14px; font-size:16px; font-weight:700;
@@ -70,7 +75,6 @@
     box-shadow:0 2px 8px rgba(0,0,0,.18); display:flex; justify-content:space-between; font-weight:700;
   }
 
-  /* 일시정지 오버레이 */
   #pauseOverlay{
     position: fixed; inset:0; display:none; place-items:center;
     background: rgba(0,0,0,.4);
@@ -126,11 +130,10 @@
   </div>
 </div>
 
-<!-- 일시정지 오버레이 -->
 <div id="pauseOverlay" aria-hidden="true">
   <div class="card">
     <h2>일시정지 ⏸️</h2>
-    <p>잠깐 쉬어가요. 계속하려면 아래 버튼을 눌러주세요.</p>
+    <p>계속하려면 아래 버튼을 누르세요.</p>
     <button class="resume">▶️ Resume</button>
   </div>
 </div>
@@ -141,6 +144,19 @@
 <footer>© multicampus arcade</footer>
 
 <script>
+  // ======= 난이도/속도 튜닝 파라미터 =======
+  const CONFIG = {
+    SPAWN_BASE_MS: 850,     // 기본 스폰 간격
+    SPAWN_MIN_MS:  220,     // 최소 스폰 간격(더 작을수록 빠름)
+    SCORE_STEP_MS: 80,      // 점수 10점마다 줄어드는 양
+    TIME_STEP_MS:  60,      // 경과 10초마다 줄어드는 양
+
+    VISIBLE_BASE_MS: 780,   // 기본 노출 시간
+    VISIBLE_MIN_MS:  420,   // 최소 노출 시간
+    VISIBLE_STEP_MS: 60     // 난이도 상승시 줄어드는 양(점수/시간의 큰쪽 기준)
+  };
+  // ========================================
+
   const grid = document.getElementById('grid');
   const scoreEl = document.getElementById('score');
   const startBtn = document.getElementById('start');
@@ -161,75 +177,63 @@
   const gameDuration = 30;
   let timeLeft = gameDuration;
 
-  let moleInterval = 1000;
-  const moleVisibleTime = 800;
+  // 동적으로 변할 값
+  let moleInterval = CONFIG.SPAWN_BASE_MS;
+  let moleVisibleTime = CONFIG.VISIBLE_BASE_MS;
+
   const moleImgUrl = 'https://i.postimg.cc/D0p0cdj3/pngegg.png';
 
-  // 잠금 관련
+  // 입력 잠금
   let lastTouchEnd = 0;
   let lockScrollY = 0;
   let isLocked = false;
   const prevent = (e)=>{ e.preventDefault(); };
   const preventScroll = ()=>{ window.scrollTo(0, lockScrollY); };
-
   function enableInputLock(){
     if(isLocked) return;
-    isLocked = true;
-    lockScrollY = window.scrollY || 0;
-
+    isLocked = true; lockScrollY = window.scrollY || 0;
     document.documentElement.classList.add('lock','playing');
     document.body.classList.add('lock','playing');
     document.body.style.top = `-${lockScrollY}px`;
-
     document.addEventListener('touchmove', prevent, {passive:false});
     document.addEventListener('gesturestart', prevent, {passive:false});
     document.addEventListener('touchend', (e)=>{
-      const now = Date.now();
-      if(now - lastTouchEnd < 300){ e.preventDefault(); }
-      lastTouchEnd = now;
+      const now = Date.now(); if(now - lastTouchEnd < 300){ e.preventDefault(); } lastTouchEnd = now;
     }, {passive:false});
     window.addEventListener('scroll', preventScroll, {passive:false});
     window.addEventListener('keydown', blockKeys, {capture:true});
   }
   function disableInputLock(){
-    if(!isLocked) return;
-    isLocked = false;
+    if(!isLocked) return; isLocked = false;
     document.documentElement.classList.remove('lock','playing');
     document.body.classList.remove('lock','playing');
     document.removeEventListener('touchmove', prevent);
     document.removeEventListener('gesturestart', prevent);
     window.removeEventListener('scroll', preventScroll);
     window.removeEventListener('keydown', blockKeys, {capture:true});
-    const y = lockScrollY;
-    document.body.style.top = '';
-    window.scrollTo(0, y);
+    const y = lockScrollY; document.body.style.top = ''; window.scrollTo(0, y);
   }
   function blockKeys(e){
     const keys = ['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','PageUp','PageDown','Home','End'];
-    if(keys.includes(e.code)){ e.preventDefault(); }
+    if(keys.includes(e.code)) e.preventDefault();
   }
 
   // 일시정지 상태
   let running = false;
   let paused  = false;
-
   function setPaused(state){
     if(!running) return;
     paused = state;
     if(paused){
-      // 스폰 중단 & BGM 일시정지
       clearInterval(gameTimer);
       bgm.pause();
-      // 오버레이 표시, 버튼 텍스트 변경
       pauseOverlay.classList.add('show');
       pauseOverlay.setAttribute('aria-hidden', 'false');
       pauseBtn.textContent = '▶️ Resume';
-    }else{
-      // 스폰 재개 & BGM 재개
+    } else {
       clearInterval(gameTimer);
       gameTimer = setInterval(showMoles, moleInterval);
       bgm.play().catch(()=>{});
-      // 오버레이 숨김, 버튼 텍스트 변경
       pauseOverlay.classList.remove('show');
       pauseOverlay.setAttribute('aria-hidden', 'true');
       pauseBtn.textContent = '⏸️ Pause';
@@ -251,9 +255,22 @@
     }
   }
 
+  // ✅ 점수와 시간 기반으로 스폰/노출 속도 계산
   function updateDifficulty() {
-    moleInterval = Math.max(300, 1000 - Math.floor(score / 10) * 100);
-    // 재개 시 최신 템포 반영
+    const elapsed = gameDuration - timeLeft;            // 경과 시간 (초)
+    const scoreTier = Math.floor(score / 10);           // 10점 단위
+    const timeTier  = Math.floor(elapsed / 10);         // 10초 단위
+    const tier = Math.max(scoreTier, timeTier);         // 더 어려운쪽 기준
+
+    // 스폰 간격 줄이기
+    const byScore = scoreTier * CONFIG.SCORE_STEP_MS;
+    const byTime  = timeTier  * CONFIG.TIME_STEP_MS;
+    moleInterval = Math.max(CONFIG.SPAWN_MIN_MS, CONFIG.SPAWN_BASE_MS - Math.max(byScore, byTime));
+
+    // 노출 시간도 점진적으로 단축
+    moleVisibleTime = Math.max(CONFIG.VISIBLE_MIN_MS, CONFIG.VISIBLE_BASE_MS - tier * CONFIG.VISIBLE_STEP_MS);
+
+    // 진행 중이면 즉시 반영
     if(running && !paused){
       clearInterval(gameTimer);
       gameTimer = setInterval(showMoles, moleInterval);
@@ -276,7 +293,7 @@
 
   function whack(e) {
     if(e && e.cancelable) e.preventDefault();
-    if(paused) return;                 // ⛔ 일시정지 중 클릭 무시
+    if(paused) return;
     if(!e.isTrusted) return;
     if(this.classList.contains('up')) {
       score++;
@@ -284,8 +301,9 @@
       this.classList.remove('up');
       hitSound.currentTime = 0;
       hitSound.play().catch(()=>{});
-      clearInterval(gameTimer);
+      // 난이도 즉시 갱신
       updateDifficulty();
+      clearInterval(gameTimer);
       gameTimer = setInterval(showMoles, moleInterval);
       showMoles();
     }
@@ -296,9 +314,10 @@
     timerEl.textContent = `Time left: ${timeLeft}s`;
     clearInterval(countdownTimer);
     countdownTimer = setInterval(()=>{
-      if(paused) return;               // ⏸️ 멈춤
+      if(paused) return;
       timeLeft--;
       timerEl.textContent = `Time left: ${timeLeft}s`;
+      updateDifficulty(); // ⬅ 시간 경과에 따른 난이도 반영
       if(timeLeft <= 0) {
         clearInterval(countdownTimer);
         endGame();
@@ -312,11 +331,7 @@
     bgm.pause();
     bgm.currentTime = 0;
     clearInterval(gameTimer);
-
-    // 잠금 해제
     disableInputLock();
-
-    // 오버레이 닫기/버튼 복원
     pauseOverlay.classList.remove('show');
     pauseOverlay.setAttribute('aria-hidden', 'true');
     pauseBtn.textContent = '⏸️ Pause';
@@ -358,18 +373,13 @@
     scoreboardList.style.display='none';
     holes.forEach(({mole})=>mole.classList.remove('up'));
 
-    // 모바일 입력 잠금
     enableInputLock();
+    running = true; paused = false;
 
-    // 상태
-    running = true;
-    paused = false;
-
-    // BGM
     bgm.currentTime=0;
     bgm.play().catch(()=>{});
 
-    // 게임 루프
+    // 초기 난이도 반영 후 시작
     updateDifficulty();
     showMoles();
     clearInterval(gameTimer);
@@ -377,10 +387,14 @@
     startCountdown();
   }
 
-  // 헤더 버튼
   document.getElementById('homeLogo').addEventListener('click', ()=>window.scrollTo({top:0, behavior:'smooth'}));
   pauseBtn.addEventListener('click', ()=> setPaused(!paused));
   resumeBtn.addEventListener('click', ()=> setPaused(false));
+
+  function blockKeys(e){
+    const keys = ['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','PageUp','PageDown','Home','End'];
+    if(keys.includes(e.code)) e.preventDefault();
+  }
 
   createGrid();
   displayScores();
