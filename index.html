@@ -28,28 +28,41 @@
     min-height:100vh;
   }
 
-  /* ✅ 헤더 전체 흰색 바 */
+  /* ✅ 헤더: 흰색 바 + 검은 제목 */
   header{
     position:sticky; top:0; z-index:10; width:100%;
-    display:flex; align-items:center; justify-content:space-between;
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
     padding: var(--header-pad) calc(var(--side-pad) + 12px) 10px calc(var(--side-pad) + 12px);
-    background: #fff; /* 흰색 */
-    box-shadow: 0 2px 6px rgba(0,0,0,.15);
+    background:#fff; box-shadow: 0 2px 6px rgba(0,0,0,.15);
   }
+  .left, .right{display:flex; align-items:center; gap:10px; min-width:0}
+  .center{flex:1; display:flex; justify-content:center; min-width:0}
   #homeLogo{ display:inline-flex; align-items:center; cursor:pointer; }
-  #homeLogo img{
-    height:32px; width:auto; object-fit:contain; display:block;
+  #homeLogo img{ height:32px; width:auto; object-fit:contain; display:block; }
+  .title{
+    margin:0; font-size:clamp(16px,4.5vw,22px); font-weight:800; color:#111;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
 
-  .hud .btn{
-    min-height:40px; min-width:60px; padding:6px 12px; font-size:15px; font-weight:600;
-    border:1px solid #ccc; border-radius:8px; cursor:pointer; background:#fff; color:#333;
+  .btn{
+    min-height:40px; min-width:60px; padding:6px 12px; font-size:15px; font-weight:700;
+    border:1px solid #d1d5db; border-radius:10px; cursor:pointer; background:#fff; color:#111;
+    box-shadow:0 1px 0 rgba(0,0,0,.02);
+  }
+
+  /* ✅ 상태바 (Time / Score) */
+  .statusbar{
+    width:100%; display:flex; justify-content:center; gap:10px;
+    padding:10px calc(var(--side-pad) + 12px) 0;
+  }
+  .pill{
+    background: rgba(255,255,255,.92);
+    border:1px solid rgba(17,24,39,.08);
+    border-radius:999px; padding:8px 12px; font-weight:700; font-size:14px;
+    box-shadow:0 2px 6px rgba(0,0,0,.08);
   }
 
   .wrap{ width:min(760px,100%); padding:12px calc(var(--side-pad) + 12px) 0 }
-  h1{ margin:12px 0 8px; color:#fff; text-shadow:0 2px 10px rgba(0,0,0,.4); font-size:clamp(18px,4.5vw,24px); font-weight:800; }
-  #timer, #scoreboard{ color:#fff; text-shadow:0 1px 6px rgba(0,0,0,.45); font-size:clamp(14px,3.8vw,18px); margin-bottom:6px; }
-
   #grid{
     display:grid; grid-template-columns:repeat(3, var(--cell)); grid-auto-rows:var(--cell);
     gap:var(--gap); justify-content:center; width:100%; margin:8px 0 12px;
@@ -65,8 +78,8 @@
   }
   .mole.up{ top:28%; }
 
-  button#start{
-    display:inline-block; min-height:44px; min-width:120px; padding:10px 20px;
+  .primary{
+    display:inline-block; min-height:44px; min-width:140px; padding:11px 20px;
     font-size:16px; font-weight:800; border-radius:12px; border:0; background:#111; color:#fff;
     box-shadow:0 6px 18px rgba(0,0,0,.25);
   }
@@ -79,6 +92,17 @@
     box-shadow:0 2px 8px rgba(0,0,0,.18); display:flex; justify-content:space-between; font-weight:700;
   }
 
+  /* ✅ 일시정지 오버레이 */
+  .overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.45);
+    display:none; align-items:center; justify-content:center; z-index:20;
+    backdrop-filter: blur(2px);
+  }
+  .overlay .card{
+    background:#fff; color:#111; padding:18px 22px; border-radius:14px; font-weight:800; font-size:18px;
+    box-shadow:0 12px 28px rgba(0,0,0,.25);
+  }
+
   footer{
     margin-top:auto; width:100%; text-align:center;
     padding:14px calc(var(--side-pad) + 12px) max(12px, env(safe-area-inset-bottom, 0));
@@ -89,26 +113,38 @@
 <body>
 
 <header>
-  <div id="homeLogo" role="button" tabindex="0" title="초기 화면으로 이동">
-    <img src="https://api.multicampus.com/ssf/v1/resource/public/images/FILBS202506207041267" alt="multicampus 로고" />
+  <div class="left">
+    <div id="homeLogo" role="button" tabindex="0" title="초기 화면으로 이동">
+      <img src="https://api.multicampus.com/ssf/v1/resource/public/images/FILBS202506207041267" alt="multicampus 로고" />
+    </div>
   </div>
-  <div class="hud" aria-live="polite">
+  <div class="center">
+    <h1 class="title">두더지 잡기 대작전</h1>
+  </div>
+  <div class="right">
     <button id="pauseBtn" class="btn">⏸️ Pause</button>
   </div>
 </header>
 
-<div class="wrap">
-  <h1>두더지 잡기 대작전</h1>
-  <div id="timer">Time left: 30s</div>
-  <div id="scoreboard">Score: <span id="score">0</span></div>
+<!-- ✅ 상태바: Time / Score -->
+<div class="statusbar" aria-live="polite">
+  <div class="pill" id="timer">Time left: 30s</div>
+  <div class="pill">Score: <span id="score">0</span></div>
+</div>
 
+<div class="wrap">
   <div id="grid"></div>
-  <button id="start">Start Game</button>
+  <button id="start" class="primary">Start Game</button>
 
   <div id="scoreboard-list" style="display:none;">
     <h2>👑 Scoreboard</h2>
     <ul id="scores"></ul>
   </div>
+</div>
+
+<!-- 일시정지 오버레이 -->
+<div id="pauseOverlay" class="overlay" aria-hidden="true">
+  <div class="card">⏸️ Paused</div>
 </div>
 
 <audio id="bgm" src="https://www.dropbox.com/scl/fi/05ytgdfewmcgokh7onrzp/770707__audiocoffee__children-game-loop-ver.wav?rlkey=elzlfgeetnf16zieb8nrmri5j&raw=1" loop></audio>
@@ -117,7 +153,7 @@
 <footer>© multicampus arcade</footer>
 
 <script>
-  // 기존 게임 로직은 동일하게 유지
+  // 요소 참조
   const grid = document.getElementById('grid');
   const scoreEl = document.getElementById('score');
   const startBtn = document.getElementById('start');
@@ -127,7 +163,10 @@
   const bgm = document.getElementById('bgm');
   const hitSound = document.getElementById('hitSound');
   const pauseBtn = document.getElementById('pauseBtn');
+  const pauseOverlay = document.getElementById('pauseOverlay');
+  const homeLogo = document.getElementById('homeLogo');
 
+  // 상태
   const holes = [];
   let score = 0;
   let gameTimer = null;
@@ -139,6 +178,9 @@
   const moleVisibleTime = 800;
   const moleImgUrl = 'https://i.postimg.cc/D0p0cdj3/pngegg.png';
 
+  let isRunning = false;
+  let isPaused = false;
+
   function createGrid() {
     for(let i=0; i<9; i++) {
       const hole = document.createElement('div');
@@ -149,7 +191,7 @@
       hole.appendChild(mole);
       grid.appendChild(hole);
       holes.push({hole, mole});
-      mole.addEventListener('click', whack);
+      mole.addEventListener('click', whack, {passive:true});
     }
   }
 
@@ -158,6 +200,7 @@
   }
 
   function showMoles() {
+    if (!isRunning || isPaused) return;
     let moleCount = score>=25 ? 3 : score>=10 ? 2 : 1;
     let holesAvailable = holes.filter(h => !h.mole.classList.contains('up'));
     moleCount = Math.min(moleCount, holesAvailable.length);
@@ -171,7 +214,7 @@
   }
 
   function whack(e) {
-    if(!e.isTrusted) return;
+    if(!e.isTrusted || !isRunning || isPaused) return;
     if(this.classList.contains('up')) {
       score++;
       scoreEl.textContent = score;
@@ -189,6 +232,7 @@
     timeLeft = gameDuration;
     timerEl.textContent = `Time left: ${timeLeft}s`;
     countdownTimer = setInterval(()=>{
+      if (isPaused) return;
       timeLeft--;
       timerEl.textContent = `Time left: ${timeLeft}s`;
       if(timeLeft <= 0) {
@@ -199,14 +243,23 @@
   }
 
   function endGame() {
+    isRunning = false;
+    isPaused = false;
+    pauseOverlay.style.display = 'none';
+    pauseOverlay.setAttribute('aria-hidden','true');
+
     bgm.pause();
     bgm.currentTime = 0;
     clearInterval(gameTimer);
+    clearInterval(countdownTimer);
+
     alert(`Time's up! Your score: ${score}`);
     let playerName = prompt('Enter your name for the scoreboard:','Player') || 'Player';
     saveScore(playerName, score);
     displayScores();
     startBtn.disabled = false;
+    pauseBtn.disabled = true;
+    pauseBtn.textContent = '⏸️ Pause';
   }
 
   function saveScore(name, score) {
@@ -235,9 +288,14 @@
   function startGame() {
     score=0;
     scoreEl.textContent=score;
-    startBtn.disabled=true;
     scoreboardList.style.display='none';
     holes.forEach(({mole})=>mole.classList.remove('up'));
+
+    isRunning = true;
+    isPaused = false;
+    startBtn.disabled=true;
+    pauseBtn.disabled=false;
+    pauseBtn.textContent = '⏸️ Pause';
 
     bgm.currentTime=0;
     bgm.play().catch(()=>{});
@@ -246,12 +304,57 @@
     showMoles();
     clearInterval(gameTimer);
     gameTimer=setInterval(showMoles,moleInterval);
+    clearInterval(countdownTimer);
     startCountdown();
   }
 
+  function togglePause(){
+    if (!isRunning) return;
+    isPaused = !isPaused;
+    if (isPaused){
+      // 멈춤
+      bgm.pause();
+      clearInterval(gameTimer);
+      pauseOverlay.style.display = 'flex';
+      pauseOverlay.setAttribute('aria-hidden','false');
+      pauseBtn.textContent = '▶️ Resume';
+    } else {
+      // 재개
+      bgm.play().catch(()=>{});
+      updateDifficulty();
+      gameTimer = setInterval(showMoles, moleInterval);
+      showMoles();
+      pauseOverlay.style.display = 'none';
+      pauseOverlay.setAttribute('aria-hidden','true');
+      pauseBtn.textContent = '⏸️ Pause';
+    }
+  }
+
+  // 로고 클릭 시 초기화(처음 화면 느낌)
+  function goHome(){
+    // 게임 중이면 정리
+    isRunning = false; isPaused = false;
+    bgm.pause(); bgm.currentTime = 0;
+    clearInterval(gameTimer); clearInterval(countdownTimer);
+    holes.forEach(({mole})=>mole.classList.remove('up'));
+    timeLeft = gameDuration;
+    timerEl.textContent = `Time left: ${timeLeft}s`;
+    score = 0; scoreEl.textContent = score;
+    startBtn.disabled = false;
+    pauseBtn.disabled = true;
+    pauseBtn.textContent = '⏸️ Pause';
+    pauseOverlay.style.display = 'none';
+    scoreboardList.style.display='none';
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  // 초기화
   createGrid();
   displayScores();
   startBtn.addEventListener('click', startGame);
+  pauseBtn.addEventListener('click', togglePause);
+  pauseBtn.disabled = true;
+  homeLogo.addEventListener('click', goHome);
 </script>
 </body>
 </html>
